@@ -1,0 +1,58 @@
+{
+  "type": "extension", 
+  "name": "ten_turn_detection",
+  "version": "1.0.0",
+  "api": {
+    "property": {
+      "model_path": {
+        "type": "string"
+      },
+      "system_prompt": {
+        "type": "string"
+      },
+      "max_history_length": {
+        "type": "int"
+      }
+    },
+    "data_in": [
+      {
+        "name": "text",
+        "property": {
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      {
+        "name": "vad_result",
+        "property": {
+          "is_speech": {
+            "type": "bool"
+          },
+          "confidence": {
+            "type": "float"
+          }
+        }
+      }
+    ],
+    "data_out": [
+      {
+        "name": "turn_result",
+        "property": {
+          "state": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "float"
+          },
+          "text": {
+            "type": "string"
+          },
+          "should_respond": {
+            "type": "bool"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "type": "extension",
+  "name": "ten_vad",
+  "version": "1.0.0",
+  "api": {
+    "property": {
+      "threshold": {
+        "type": "float"
+      },
+      "sample_rate": {
+        "type": "int"
+      },
+      "frame_size": {
+        "type": "int"
+      },
+      "min_silence_duration": {
+        "type": "float"
+      },
+      "min_speech_duration": {
+        "type": "float"
+      }
+    },
+    "data_in": [
+      {
+        "name": "audio_frame",
+        "property": {}
+      }
+    ],
+    "data_out": [
+      {
+        "name": "vad_result",
+        "property": {
+          "is_speech": {
+            "type": "bool"
+          },
+          "confidence": {
+            "type": "float"
+          },
+          "timestamp": {
+            "type": "int"
+          }
+        }
+      }
+    ]
+  }
+}

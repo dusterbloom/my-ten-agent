@@ -299,7 +299,7 @@
         <div class="main-grid">
             <div class="panel">
                 <h3>System Status</h3>
-                <div class="status-grid">
+                <div class="status-grid" style="grid-template-columns: repeat(3, 1fr);">
                     <div class="status-item status-offline" id="status-ollama">
                         Ollama: Offline
                     </div>
@@ -311,6 +311,12 @@
                     </div>
                     <div class="status-item status-offline" id="status-piper">
                         Piper: Offline
+                    </div>
+                    <div class="status-item status-offline" id="status-vad">
+                        VAD: Offline
+                    </div>
+                    <div class="status-item status-offline" id="status-turn-detection">
+                        Turn Detection: Offline
                     </div>
                 </div>
             </div>
@@ -327,6 +333,28 @@
                 </div>
                 <div class="audio-visualizer" id="audio-visualizer">
                     Click "Start Recording" to begin
+                </div>
+                
+                <!-- VAD Status Display -->
+                <div style="margin-top: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <strong>Voice Activity Detection</strong>
+                        <span id="vad-status" style="font-size: 0.9em; color: #6c757d;">Inactive</span>
+                    </div>
+                    <div id="vad-indicator" style="height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden;">
+                        <div id="vad-level" style="height: 100%; width: 0%; background: #28a745; transition: width 0.2s;"></div>
+                    </div>
+                </div>
+                
+                <!-- Turn Detection Status Display -->
+                <div style="margin-top: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <strong>Turn Detection</strong>
+                        <span id="turn-state" style="font-size: 0.9em; padding: 2px 8px; border-radius: 12px; background: #e9ecef; color: #6c757d;">None</span>
+                    </div>
+                    <div id="turn-info" style="font-size: 0.85em; color: #6c757d; min-height: 20px;">
+                        Ready to analyze speech
+                    </div>
                 </div>
             </div>
         </div>
@@ -471,6 +499,15 @@
                 });
                 
                 const result = await response.json();
+                
+                // Update status for all services
+                updateStatus('ollama', result.ollama);
+                updateStatus('whisper', result.whisper);
+                updateStatus('piper', result.piper);
+                updateStatus('livekit', result.livekit);
+                updateStatus('vad', result.vad);
+                updateStatus('turn-detection', result.turn_detection);
+                
                 addLog(`Test results: ${JSON.stringify(result)}`, 'success');
             } catch (error) {
                 addLog(`Test failed: ${error.message}`, 'error');
@@ -479,36 +516,57 @@
 
         async function startAudio() {
             try {
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    addLog('WebSocket not connected. Connecting...', 'warning');
+                    initWebSocket();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
                 audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(audioStream);
+                mediaRecorder = new MediaRecorder(audioStream, { 
+                    mimeType: 'audio/webm',
+                    audioBitsPerSecond: 16000 
+                });
+                
+                // Start audio session via WebSocket
+                ws.send(JSON.stringify({
+                    type: 'start_audio_session'
+                }));
                 
                 const audioChunks = [];
-                mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
-                };
+                let chunkCounter = 0;
                 
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    const formData = new FormData();
-                    formData.append('audio', audioBlob, 'recording.wav');
-                    
-                    try {
-                        const response = await fetch('/api/transcribe', {
-                            method: 'POST',
-                            body: formData
-                        });
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
                         
-                        const result = await response.json();
-                        if (result.text) {
-                            addMessage(result.text, 'user');
-                            processMessage(result.text);
-                        }
-                    } catch (error) {
-                        addLog(`Transcription failed: ${error.message}`, 'error');
+                        // Convert to base64 and send via WebSocket for real-time processing
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            const base64Audio = reader.result.split(',')[1];
+                            if (ws && ws.readyState === WebSocket.OPEN) {
+                                ws.send(JSON.stringify({
+                                    type: 'audio_chunk',
+                                    audio: base64Audio,
+                                    chunk_id: chunkCounter++
+                                }));
+                            }
+                        };
+                        reader.readAsDataURL(event.data);
                     }
                 };
                 
-                mediaRecorder.start();
+                mediaRecorder.onstop = () => {
+                    // End audio session
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'end_audio_session'
+                        }));
+                    }
+                };
+                
+                // Start recording with small time slices for real-time processing
+                mediaRecorder.start(250); // Send data every 250ms
                 isRecording = true;
                 
                 document.getElementById('start-audio').disabled = true;
@@ -595,10 +653,155 @@
             addLog('Logs downloaded', 'info');
         }
 
+        // VAD and Turn Detection UI Updates
+        function updateVADStatus(result) {
+            const vadStatus = document.getElementById('vad-status');
+            const vadLevel = document.getElementById('vad-level');
+            
+            if (result.is_speech) {
+                vadStatus.textContent = `Active (${(result.confidence * 100).toFixed(1)}%)`;
+                vadStatus.style.color = '#28a745';
+                vadLevel.style.width = `${result.confidence * 100}%`;
+                vadLevel.style.background = '#28a745';
+            } else {
+                vadStatus.textContent = 'Silent';
+                vadStatus.style.color = '#6c757d';
+                vadLevel.style.width = '0%';
+            }
+        }
+        
+        function updateTurnDetectionStatus(result) {
+            const turnState = document.getElementById('turn-state');
+            const turnInfo = document.getElementById('turn-info');
+            
+            // Update state badge
+            turnState.textContent = result.state.charAt(0).toUpperCase() + result.state.slice(1);
+            
+            // Color coding for states
+            if (result.state === 'finished') {
+                turnState.style.background = '#d4edda';
+                turnState.style.color = '#155724';
+            } else if (result.state === 'unfinished') {
+                turnState.style.background = '#fff3cd';
+                turnState.style.color = '#856404';
+            } else if (result.state === 'wait') {
+                turnState.style.background = '#f8d7da';
+                turnState.style.color = '#721c24';
+            } else {
+                turnState.style.background = '#e9ecef';
+                turnState.style.color = '#6c757d';
+            }
+            
+            // Update info text
+            const confidence = (result.confidence * 100).toFixed(1);
+            const shouldRespond = result.should_respond ? 'Yes' : 'No';
+            turnInfo.innerHTML = `Confidence: ${confidence}% | Should respond: ${shouldRespond}`;
+        }
+
+        // WebSocket connection for real-time updates
+        let ws = null;
+        let audioSession = null;
+        
+        function initWebSocket() {
+            if (ws) return;
+            
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                addLog('WebSocket connected for real-time updates', 'success');
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    switch (data.type) {
+                        case 'session_started':
+                            audioSession = data.sessionId;
+                            addLog(`Audio session started: ${audioSession}`, 'info');
+                            break;
+                            
+                        case 'transcription':
+                            addMessage(data.text, 'user');
+                            addLog(`Transcribed: ${data.text}`, 'info');
+                            break;
+                            
+                        case 'vad_result':
+                            updateVADStatus(data);
+                            break;
+                            
+                        case 'turn_result':
+                            updateTurnDetectionStatus(data);
+                            addLog(`Turn detection: ${data.state} (${(data.confidence * 100).toFixed(1)}%)`, 'info');
+                            break;
+                            
+                        case 'llm_response':
+                            addMessage(data.text, 'assistant');
+                            break;
+                            
+                        case 'tts_audio_chunk':
+                            // Handle TTS audio streaming
+                            playAudioChunk(data.audio);
+                            break;
+                            
+                        case 'tts_audio_end':
+                            addLog('TTS audio playback completed', 'info');
+                            break;
+                            
+                        case 'error':
+                            addLog(`WebSocket error: ${data.message}`, 'error');
+                            break;
+                            
+                        default:
+                            console.log('Unknown WebSocket message:', data);
+                    }
+                } catch (error) {
+                    console.error('Failed to parse WebSocket message:', error);
+                }
+            };
+            
+            ws.onclose = () => {
+                addLog('WebSocket disconnected', 'warning');
+                ws = null;
+                // Attempt to reconnect after 3 seconds
+                setTimeout(initWebSocket, 3000);
+            };
+            
+            ws.onerror = (error) => {
+                addLog('WebSocket error occurred', 'error');
+            };
+        }
+        
+        function playAudioChunk(base64Audio) {
+            try {
+                const audioData = atob(base64Audio);
+                const arrayBuffer = new ArrayBuffer(audioData.length);
+                const view = new Uint8Array(arrayBuffer);
+                for (let i = 0; i < audioData.length; i++) {
+                    view[i] = audioData.charCodeAt(i);
+                }
+                
+                // Create audio blob and play
+                const audioBlob = new Blob([arrayBuffer], { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                audio.play().catch(e => console.log('Audio play failed:', e));
+                
+                // Clean up URL after playing
+                audio.onended = () => URL.revokeObjectURL(audioUrl);
+            } catch (error) {
+                console.error('Failed to play audio chunk:', error);
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             addLog('Playground initialized', 'info');
             connectAll();
+            initWebSocket();
         });
     </script>
 </body>

@@ -17,7 +17,7 @@ class OllamaLLMExtension(Extension):
     def __init__(self, name: str) -> None:
         super().__init__(name)
         self.base_url = "http://localhost:11434"
-        self.model = "llama3.2"
+        self.model = "llama3.2:3b"
         self.conversation_history = []
         self.session = None
         
