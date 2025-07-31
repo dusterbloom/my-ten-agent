@@ -1,0 +1,35 @@
+{
+  "type": "extension",
+  "name": "piper_tts",
+  "version": "1.0.0",
+  "api": {
+    "properties": [
+      {
+        "name": "voice",
+        "type": "string",
+        "description": "Piper TTS voice model to use",
+        "default_value": "en_US-amy-medium"
+      },
+      {
+        "name": "speed",
+        "type": "float",
+        "description": "Speech speed multiplier",
+        "default_value": 1.0
+      }
+    ],
+    "data_in": [
+      {
+        "name": "text",
+        "type": "string",
+        "description": "Text to synthesize to speech"
+      }
+    ],
+    "data_out": [
+      {
+        "name": "audio",
+        "type": "audio_frame",
+        "description": "Synthesized audio data"
+      }
+    ]
+  }
+}

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEN Agent</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .extension {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .extension h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.loaded {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TEN Agent</h1>
+        <p>Local AI agent with LiveKit, Whisper, and Ollama integration</p>
+        
+        <div id="extensions">
+            <h2>Loaded Extensions</h2>
+            <div id="extension-list">Loading...</div>
+        </div>
+        
+        <div class="log" id="log">
+            <strong>Status:</strong> Connecting...
+        </div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        const extensionList = document.getElementById('extension-list');
+        
+        function addLog(message) {
+            log.innerHTML += '<br>' + new Date().toLocaleTimeString() + ': ' + message;
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        // Connect to WebSocket
+        const ws = new WebSocket('ws://localhost:3000');
+        
+        ws.onopen = () => {
+            addLog('Connected to server');
+            loadExtensions();
+        };
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            addLog('Received: ' + JSON.stringify(data));
+        };
+        
+        ws.onclose = () => {
+            addLog('Disconnected from server');
+        };
+        
+        ws.onerror = (error) => {
+            addLog('WebSocket error: ' + error.message);
+        };
+        
+        // Load extensions via REST API
+        async function loadExtensions() {
+            try {
+                const response = await fetch('/api/extensions');
+                const extensions = await response.json();
+                
+                extensionList.innerHTML = '';
+                extensions.forEach(ext => {
+                    const div = document.createElement('div');
+                    div.className = 'extension';
+                    div.innerHTML = `
+                        <h3>${ext.name}</h3>
+                        <p>${ext.manifest.description || 'No description'}</p>
+                        <span class="status loaded">Loaded</span>
+                        <p><strong>Type:</strong> ${ext.manifest.type || 'Unknown'}</p>
+                    `;
+                    extensionList.appendChild(div);
+                });
+                
+                addLog(`Loaded ${extensions.length} extensions`);
+            } catch (error) {
+                extensionList.innerHTML = 'Error loading extensions: ' + error.message;
+                addLog('Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

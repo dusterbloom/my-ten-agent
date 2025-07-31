@@ -1,0 +1,40 @@
+{
+  "name": "ten-agent",
+  "version": "1.0.0",
+  "description": "TEN Agent - Voice and text AI agent powered by LiveKit, Whisper, Ollama, and Piper",
+  "main": "api/server.js",
+  "scripts": {
+    "start": "node api/server.js",
+    "dev": "nodemon api/server.js",
+    "setup": "bash scripts/setup.sh",
+    "test": "node scripts/test.js",
+    "build": "echo 'Build complete - ready to run'"
+  },
+  "keywords": [
+    "ai",
+    "voice",
+    "agent",
+    "livekit",
+    "whisper",
+    "ollama",
+    "piper",
+    "webrtc",
+    "stt",
+    "tts",
+    "llm"
+  ],
+  "author": "TEN Agent Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

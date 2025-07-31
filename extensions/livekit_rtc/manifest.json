@@ -1,0 +1,33 @@
+{
+  "type": "extension",
+  "name": "livekit_rtc",
+  "version": "1.0.0",
+  "api": {
+    "property": {
+      "livekit_url": {
+        "type": "string"
+      },
+      "api_key": {
+        "type": "string"
+      },
+      "api_secret": {
+        "type": "string"
+      },
+      "room_name": {
+        "type": "string"
+      }
+    },
+    "data_in": [
+      {
+        "name": "audio_frame",
+        "property": {}
+      }
+    ],
+    "data_out": [
+      {
+        "name": "audio_frame",
+        "property": {}
+      }
+    ]
+  }
+}

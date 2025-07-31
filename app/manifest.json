@@ -1,0 +1,27 @@
+{
+  "type": "app",
+  "name": "local_voice_agent",
+  "version": "1.0.0",
+  "dependencies": [
+    {
+      "type": "extension",
+      "name": "livekit_rtc",
+      "version": "1.0.0"
+    },
+    {
+      "type": "extension",
+      "name": "whisper_stt",
+      "version": "1.0.0"
+    },
+    {
+      "type": "extension",
+      "name": "ollama_llm",
+      "version": "1.0.0"
+    },
+    {
+      "type": "extension",
+      "name": "piper_tts",
+      "version": "1.0.0"
+    }
+  ]
+}

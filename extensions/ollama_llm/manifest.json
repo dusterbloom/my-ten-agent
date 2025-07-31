@@ -1,0 +1,42 @@
+{
+  "type": "extension",
+  "name": "ollama_llm",
+  "version": "1.0.0",
+  "api": {
+    "property": {
+      "model": {
+        "type": "string"
+      },
+      "base_url": {
+        "type": "string"
+      },
+      "ctx_size": {
+        "type": "int"
+      },
+      "temperature": {
+        "type": "float"
+      },
+      "top_p": {
+        "type": "float"
+      },
+      "frequency_penalty": {
+        "type": "float"
+      },
+      "presence_penalty": {
+        "type": "float"
+      }
+    },
+    "data_in": [
+      {
+        "name": "text",
+        "property": {}
+      }
+    ],
+    "data_out": [
+      {
+        "name": "text",
+        "property": {}
+      }
+    ]
+  }
+}

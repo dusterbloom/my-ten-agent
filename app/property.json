@@ -1,0 +1,116 @@
+{
+  "type": "app",
+  "name": "local_voice_agent",
+  "version": "1.0.0",
+  "ten": {
+    "graph": {
+      "nodes": [
+        {
+          "type": "extension",
+          "extension_group": "default",
+          "name": "livekit_rtc",
+          "addon": "livekit_rtc"
+        },
+        {
+          "type": "extension",
+          "extension_group": "default",
+          "name": "whisper_stt",
+          "addon": "whisper_stt"
+        },
+        {
+          "type": "extension",
+          "extension_group": "default",
+          "name": "ollama_llm",
+          "addon": "ollama_llm"
+        },
+        {
+          "type": "extension",
+          "extension_group": "default",
+          "name": "piper_tts",
+          "addon": "piper_tts"
+        }
+      ],
+      "connections": [
+        {
+          "extension": "livekit_rtc",
+          "data": [
+            {
+              "name": "audio_frame",
+              "dest": [
+                {
+                  "extension": "whisper_stt"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "extension": "whisper_stt",
+          "data": [
+            {
+              "name": "text",
+              "dest": [
+                {
+                  "extension": "ollama_llm",
+                  "name": "user_input"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "extension": "ollama_llm",
+          "data": [
+            {
+              "name": "text",
+              "dest": [
+                {
+                  "extension": "piper_tts",
+                  "name": "text_input"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "extension": "piper_tts",
+          "data": [
+            {
+              "name": "audio_frame",
+              "dest": [
+                {
+                  "extension": "livekit_rtc"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "property": {
+      "livekit_rtc": {
+        "livekit_url": "${LIVEKIT_URL:-http://localhost:7880}",
+        "api_key": "${LIVEKIT_API_KEY:-devkey}",
+        "api_secret": "${LIVEKIT_API_SECRET:-secret}",
+        "room_name": "local-agent"
+      },
+      "whisper_stt": {
+        "model": "base",
+        "language": "en"
+      },
+      "ollama_llm": {
+        "model": "${OLLAMA_MODEL:-llama3.2}",
+        "base_url": "${OLLAMA_BASE_URL:-http://localhost:11434}",
+        "ctx_size": 4096,
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0
+      },
+      "piper_tts": {
+        "voice": "en_US-amy-medium",
+        "speed": 1.0
+      }
+    }
+  }
+}

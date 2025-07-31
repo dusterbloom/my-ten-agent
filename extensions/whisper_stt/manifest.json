@@ -1,0 +1,27 @@
+{
+  "type": "extension",
+  "name": "whisper_stt",
+  "version": "1.0.0",
+  "api": {
+    "property": {
+      "model": {
+        "type": "string"
+      },
+      "language": {
+        "type": "string"
+      }
+    },
+    "data_in": [
+      {
+        "name": "audio_frame",
+        "property": {}
+      }
+    ],
+    "data_out": [
+      {
+        "name": "text",
+        "property": {}
+      }
+    ]
+  }
+}
